@@ -1,6 +1,6 @@
 {
   "name": "herdr-agent-messenger",
-  "version": "0.1.0+claude.20260710154137",
+  "version": "0.2.0+claude.20260710192808",
   "description": "Local agent-to-agent messaging between live herdr panes",
   "author": {
     "name": "aashishd"
