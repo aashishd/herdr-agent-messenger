@@ -23,10 +23,11 @@ herdr plugin install aashishd/herdr-agent-messenger
 ```
 
 Herdr shows the repository and the `bash install.sh` setup command before you
-confirm. Setup adds the `msg` command, local adapter, and model-facing
-Messenger skill for each supported harness already present on the machine.
-Restart those harnesses after setup. Claude Code and Codex also ask you to
-review and trust the Messenger hook in a new session.
+confirm. Setup copies a durable integration payload to the user data directory,
+then adds the `msg` command, local adapter, and model-facing Messenger skill for
+each supported harness already present on the machine. Restart those harnesses
+after setup. Claude Code and Codex also ask you to review and trust the
+Messenger hook in a new session.
 
 ## Use Messenger
 

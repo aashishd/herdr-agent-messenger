@@ -48,12 +48,25 @@ class AgentSkillTest(unittest.TestCase):
             (ROOT / ".claude-plugin" / "marketplace.json").read_text()
         )
         codex = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text())
+        opencode = json.loads((ROOT / "adapters/opencode/package.json").read_text())
+        herdr_version = next(
+            line.split('"')[1]
+            for line in (ROOT / "herdr-plugin.toml").read_text().splitlines()
+            if line.startswith("version = ")
+        )
 
         self.assertTrue(SKILL.is_file())
         self.assertEqual(claude["hooks"], "./adapters/claude-code/hooks/hooks.json")
         self.assertEqual(
             marketplace["plugins"][0]["version"], claude["version"]
         )
+        base_versions = {
+            herdr_version,
+            claude["version"].split("+")[0],
+            codex["version"].split("+")[0],
+            opencode["version"],
+        }
+        self.assertEqual(base_versions, {"0.2.1"})
         self.assertEqual(codex["skills"], "./skills/")
 
     @unittest.skipUnless(shutil.which("claude"), "Claude Code is required")

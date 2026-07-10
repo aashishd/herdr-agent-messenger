@@ -26,9 +26,11 @@ herdr plugin install aashishd/herdr-agent-messenger
 ```
 
 Herdr displays a trust preview before running the repository's setup command.
-The setup command installs the `msg` PATH link and configures only the supported
-harnesses it detects. Each configured harness receives its local adapter and a
-model-facing Messenger skill. Restart it so both are loaded.
+The setup command copies a durable integration payload under
+`${XDG_DATA_HOME:-$HOME/.local/share}/herdr-agent-messenger/`, installs the
+`msg` PATH link, and configures only the supported harnesses it detects. Each
+configured harness receives its local adapter and a model-facing Messenger
+skill. Restart it so both are loaded.
 
 In a new Claude Code or Codex session, open `/hooks`, review the Messenger hook,
 and trust it. The hook keeps cancellation and identity lookup out of model
@@ -168,23 +170,24 @@ Herdr v1 refreshes a GitHub-managed plugin by reinstalling it:
 herdr plugin install aashishd/herdr-agent-messenger
 ```
 
-Restart configured harnesses after the update. For a linked checkout, pull the
-changes and rerun `./install.sh`.
+Setup atomically replaces the durable integration payload and removes files
+that no longer belong to the plugin. Restart configured harnesses after the
+update. For a linked checkout, pull the changes and rerun `./install.sh`.
 
 ## Uninstall
 
-Remove the harness wiring before Herdr removes its managed checkout. If `msg`
-is the installed symlink:
+Remove the harness wiring and durable payload before asking Herdr to remove its
+managed checkout:
 
 ```sh
-PLUGIN_ROOT="$(cd "$(dirname "$(readlink "$(command -v msg)")")/.." && pwd)"
-"$PLUGIN_ROOT/install.sh" --uninstall
+PAYLOAD="${XDG_DATA_HOME:-$HOME/.local/share}/herdr-agent-messenger/plugin"
+"$PAYLOAD/install.sh" --uninstall
 herdr plugin uninstall herdr-agent-messenger
 ```
 
-Uninstall removes only wiring owned by this checkout. The compatibility
-call-sign registry at `~/.local/state/herdr-messenger/` remains so uninstall
-does not delete unrelated or historical local state.
+Uninstall removes only recorded Messenger wiring and the owned durable payload.
+The compatibility call-sign registry at `~/.local/state/herdr-messenger/`
+remains so uninstall does not delete unrelated or historical local state.
 
 ## Troubleshooting
 
