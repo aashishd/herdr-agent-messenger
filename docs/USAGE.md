@@ -5,6 +5,10 @@ across Claude Code, pi, Codex, and OpenCode.
 
 ## Before you start
 
+Coding harnesses generally do not expose cross-agent communication themselves.
+Messenger provides it only for live agent panes inside Herdr. Its commands and
+model-facing skill are not supported outside Herdr.
+
 You need:
 
 - Herdr 0.7.1 or newer on macOS or Linux
@@ -23,7 +27,8 @@ herdr plugin install aashishd/herdr-agent-messenger
 
 Herdr displays a trust preview before running the repository's setup command.
 The setup command installs the `msg` PATH link and configures only the supported
-harnesses it detects. Restart each configured harness so it loads the adapter.
+harnesses it detects. Each configured harness receives its local adapter and a
+model-facing Messenger skill. Restart it so both are loaded.
 
 In a new Claude Code or Codex session, open `/hooks`, review the Messenger hook,
 and trust it. The hook keeps cancellation and identity lookup out of model
@@ -94,18 +99,24 @@ this argument form through its local slash command.
 
 ## Tell your agent to coordinate
 
-You do not have to open the Messenger board yourself. Ask the current agent to
-frame and send the message:
+You do not have to open the Messenger board yourself. Address the target by its
+call-sign in a normal request:
 
 ```text
-Use Messenger to share the relevant documentation and next steps with the agent named quiet-heron, so it can continue the work. Include the repository, branch, exact paths, and what response I need.
+Send quiet-heron the test results and ask it to review the remaining failure.
 ```
 
-The agent should compose a standalone message and run:
+The shared Messenger skill tells the current agent to compose a standalone,
+single-line message and run:
 
 ```sh
 msg quiet-heron '<self-contained message>'
 ```
+
+When the call-sign and request are clear, the agent sends immediately without
+opening the Messenger board or asking for separate confirmation. It reports the
+exact body and delivery result. Missing or ambiguous details produce a concise
+clarifying question instead of a guessed send.
 
 This is useful for handing off documentation, asking for a review, delegating a
 bounded investigation, or requesting test results. The receiving agent cannot
@@ -182,6 +193,9 @@ does not delete unrelated or historical local state.
 - No targets appear: start another supported agent in the same Herdr server.
 - `msg` is not found: add `~/.local/bin` to `PATH`, then restart the shell or
   harness.
+- An agent does not recognize a normal request naming a call-sign: rerun setup
+  and restart the harness so it refreshes the Messenger skill. For OpenCode,
+  confirm `opencode debug skill` lists `msg`.
 - Claude Code or Codex does not intercept Messenger locally: review and trust
   the installed hook from `/hooks`, then start a fresh session or thread.
 - The board reports that `fzf` is missing: install `fzf` with the system package

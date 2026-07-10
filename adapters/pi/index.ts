@@ -17,6 +17,10 @@ const ROOT = resolve(dirname(realpathSync(fileURLToPath(import.meta.url))), "../
 export default function messenger(pi: ExtensionAPI) {
   if (process.env.HERDR_ENV !== "1") return;
 
+  pi.on("resources_discover", () => ({
+    skillPaths: [resolve(ROOT, "skills/msg/SKILL.md")],
+  }));
+
   pi.registerCommand("msg", {
     description: "Message another agent session in herdr",
     handler: async (args, ctx) => {

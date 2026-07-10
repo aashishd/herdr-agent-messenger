@@ -17,6 +17,11 @@ you need a reproducible install.
 
 ## What Messenger accesses
 
+Coding harnesses generally do not provide cross-agent communication. Messenger
+adds that route only between live agent panes inside Herdr. Outside Herdr, the
+adapters remain inactive where the harness permits it, and the public command
+rejects delivery.
+
 At runtime, Messenger:
 
 - reads local pane, workspace, agent identity, and agent status metadata from
@@ -36,16 +41,17 @@ uses another tool to share their contents.
 The reviewed `bash install.sh` setup command can:
 
 - link `~/.local/bin/msg` to the installed plugin
-- install the Claude Code command and local plugin hook
-- link the pi extension
-- install the Codex local plugin hook and skill
-- add the OpenCode TUI plugin path to `~/.config/opencode/tui.json`
+- install the Claude Code command, local plugin hook, and model-facing skill
+- link the pi extension, which contributes the model-facing skill inside Herdr
+- install the Codex local plugin hook and model-facing skill
+- add the OpenCode TUI plugin path to `~/.config/opencode/tui.json` and link its
+  model-facing skill under `~/.config/opencode/skills/msg`
 - record owned installation entries under
   `~/.local/state/herdr-agent-messenger/install/`
 
 Setup detects each harness and skips ones that are absent. It preserves
-non-symlink files, unrelated OpenCode plugin entries, and harness configuration
-it does not own. Run `install.sh --uninstall` before removing the Herdr plugin
+non-symlink files, unrelated OpenCode plugin entries and skill links, and
+harness configuration it does not own. Run `install.sh --uninstall` before removing the Herdr plugin
 checkout to remove the owned wiring.
 
 ## Agent-message authority
@@ -60,9 +66,11 @@ privileged, or irreversible action. The receiving agent must pause for the
 receiving human's native harness approval, or keep the action blocked when no
 approval path exists.
 
-Treat agent messages as instructions from another model. Keep the message
-self-contained, verify sensitive claims, and use native approval prompts for
-protected actions.
+The model-facing skill lets the current agent run `msg` after a clear human
+request that names a target call-sign. It does not expand the receiving agent's
+authority: the resulting envelope is still an instruction from another model.
+Keep the message self-contained, verify sensitive claims, and use native
+approval prompts for protected actions.
 
 ## Reporting a vulnerability
 
