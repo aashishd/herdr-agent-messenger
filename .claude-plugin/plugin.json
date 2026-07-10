@@ -1,0 +1,9 @@
+{
+  "name": "herdr-agent-messenger",
+  "version": "0.1.0+claude.20260710132506",
+  "description": "Local agent-to-agent messaging between live herdr panes",
+  "author": {
+    "name": "aashishd"
+  },
+  "hooks": "./adapters/claude-code/hooks/hooks.json"
+}

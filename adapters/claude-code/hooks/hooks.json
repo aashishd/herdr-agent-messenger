@@ -1,0 +1,21 @@
+{
+  "description": "Keep local Messenger outcomes outside Claude context",
+  "hooks": {
+    "UserPromptExpansion": [
+      {
+        "matcher": "msg",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/adapters/claude-code/hooks/user_prompt_expansion.py"
+            ],
+            "timeout": 200,
+            "statusMessage": "Opening Messenger"
+          }
+        ]
+      }
+    ]
+  }
+}

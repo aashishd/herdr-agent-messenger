@@ -1,0 +1,15 @@
+id = "herdr-agent-messenger"
+name = "Messenger"
+version = "0.1.0"
+min_herdr_version = "0.7.1"
+description = "Agent-to-agent messaging between live herdr panes, across harnesses"
+platforms = ["macos", "linux"]
+
+[[build]]
+command = ["bash", "install.sh"]
+
+[[actions]]
+id = "compose"
+title = "Messenger: message another agent"
+contexts = ["workspace"]
+command = ["bash", "scripts/compose.sh"]

@@ -1,0 +1,11 @@
+{
+  "name": "herdr-agent-messenger",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./tui": "./tui.js"
+  },
+  "engines": {
+    "opencode": ">=1.16.0"
+  }
+}

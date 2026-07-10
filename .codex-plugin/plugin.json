@@ -1,0 +1,23 @@
+{
+  "name": "herdr-agent-messenger",
+  "version": "0.1.0+codex.20260710134502",
+  "description": "Local agent-to-agent messaging between live herdr panes",
+  "author": {
+    "name": "aashishd",
+    "url": "https://github.com/aashishd"
+  },
+  "repository": "https://github.com/aashishd/herdr-agent-messenger",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Herdr Agent Messenger",
+    "shortDescription": "Message agents in live herdr panes",
+    "longDescription": "Open Messenger, send direct messages, and identify the current herdr agent pane.",
+    "defaultPrompt": "Use Messenger to coordinate with another live herdr agent pane.",
+    "developerName": "aashishd",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ]
+  }
+}

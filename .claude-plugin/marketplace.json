@@ -1,0 +1,20 @@
+{
+  "name": "herdr-agent-messenger-local",
+  "owner": {
+    "name": "aashishd"
+  },
+  "metadata": {
+    "description": "Local development marketplace for herdr-agent-messenger"
+  },
+  "plugins": [
+    {
+      "name": "herdr-agent-messenger",
+      "source": "./",
+      "description": "Local agent-to-agent messaging between live herdr panes",
+      "version": "0.1.0+claude.20260710132506",
+      "author": {
+        "name": "aashishd"
+      }
+    }
+  ]
+}

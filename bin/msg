@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# msg: entry point for herdr-agent-messenger (send / compose / whoami).
+# Works from PATH via symlink or copy: finds the plugin root relative
+# to its own resolved location first, else asks herdr for plugin_root
+# (same pattern as the herdr-file-viewer plugin).
+# usage: msg <target> <message> [flags]   (send, same as `msg send`)
+#        msg send <target> <message> [flags]
+#        msg compose [intent]
+#        msg whoami [pane_id]
+
+set -euo pipefail
+
+resolve_root() {
+  local src="${BASH_SOURCE[0]}" dir
+  while [ -L "$src" ]; do
+    dir="$(cd "$(dirname "$src")" && pwd)"
+    src="$(readlink "$src")"
+    [ "${src#/}" = "$src" ] && src="$dir/$src"
+  done
+  dir="$(cd "$(dirname "$src")/.." && pwd)"
+  if [ -f "$dir/scripts/send.sh" ]; then
+    printf '%s' "$dir"
+    return
+  fi
+  "${HERDR_BIN_PATH:-herdr}" plugin list --json 2>/dev/null | python3 -c '
+import sys, json
+for p in json.load(sys.stdin)["result"]["plugins"]:
+    if p.get("plugin_id") == "herdr-agent-messenger":
+        print(p["plugin_root"]); break' 2>/dev/null || true
+}
+
+ROOT="$(resolve_root)"
+[ -n "$ROOT" ] && [ -f "$ROOT/scripts/send.sh" ] || {
+  echo "msg: cannot locate the herdr-agent-messenger plugin (install or link it in herdr first)" >&2
+  exit 66
+}
+
+case "${1:-}" in
+  compose) shift; exec bash "$ROOT/scripts/compose.sh" "$@" ;;
+  whoami)  shift; exec bash "$ROOT/scripts/whoami.sh" "$@" ;;
+  send)    shift ;;
+esac
+exec bash "$ROOT/scripts/send.sh" "$@"
