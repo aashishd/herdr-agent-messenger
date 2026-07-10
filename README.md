@@ -5,6 +5,10 @@ Send focused, self-contained messages between AI agents running in live
 across Claude Code, pi, Codex, and OpenCode without sharing either agent's full
 conversation.
 
+Coding harnesses generally do not expose cross-agent communication themselves.
+Messenger adds that route only between live agent panes inside Herdr; it is not
+supported outside Herdr.
+
 Each live agent pane gets a temporary call-sign such as `quiet-heron`. Use the
 Messenger board, tell your current agent what to send, or address another agent
 directly from the shell.
@@ -19,10 +23,10 @@ herdr plugin install aashishd/herdr-agent-messenger
 ```
 
 Herdr shows the repository and the `bash install.sh` setup command before you
-confirm. Setup adds the `msg` command and configures adapters only for supported
-harnesses already present on the machine. Restart those harnesses after setup.
-Claude Code and Codex also ask you to review and trust the Messenger hook in a
-new session.
+confirm. Setup adds the `msg` command, local adapter, and model-facing
+Messenger skill for each supported harness already present on the machine.
+Restart those harnesses after setup. Claude Code and Codex also ask you to
+review and trust the Messenger hook in a new session.
 
 ## Use Messenger
 
@@ -40,14 +44,16 @@ In the Messenger board, select a target and enter text:
   message and send it.
 - Press Escape twice consecutively to cancel without involving the agent.
 
-You can also ask your agent naturally:
+You can also address a target call-sign in a normal request:
 
-> Use Messenger to share the relevant documentation and next steps with the
-> agent named `quiet-heron`, so it can continue the work.
+> Send `quiet-heron` the test results and ask it to review the remaining
+> failure.
 
-The current agent frames a self-contained message and sends it with `msg`.
-Include paths, URLs, repository details, and the expected next action because
-the receiving agent cannot see the sender's conversation.
+The current agent frames a self-contained, single-line message, sends it with
+`msg`, and reports the exact body and delivery result. It does not open the
+Messenger board or ask for separate confirmation when the call-sign and request
+are clear. Include paths, URLs, repository details, and the expected next
+action because the receiving agent cannot see the sender's conversation.
 
 For direct shell use:
 

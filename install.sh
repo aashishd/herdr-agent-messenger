@@ -13,7 +13,10 @@ PI_EXTENSIONS="$HOME/.pi/agent/extensions"
 MARKETPLACE="herdr-agent-messenger-local"
 PLUGIN_SELECTOR="herdr-agent-messenger@$MARKETPLACE"
 OPENCODE_SOURCE="$ROOT/adapters/opencode/tui.js"
+OPENCODE_SKILL_SOURCE="$ROOT/skills/msg"
+OPENCODE_SKILL_DEST="$HOME/.config/opencode/skills/msg"
 INSTALL_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/herdr-agent-messenger/install"
+OPENCODE_SKILL_OWNER="$INSTALL_STATE/opencode-skill-source"
 
 link() {
   mkdir -p "$(dirname "$2")"
@@ -25,6 +28,26 @@ link() {
   echo "linked $2 -> $1"
 }
 
+link_recorded() {
+  local source="$1" destination="$2" owner="$3" current="" recorded=""
+  mkdir -p "$(dirname "$destination")"
+  if [ -L "$destination" ]; then
+    current="$(readlink "$destination")"
+    [ -f "$owner" ] && recorded="$(<"$owner")"
+    if [ "$current" != "$source" ] && [ "$current" != "$recorded" ]; then
+      echo "skip $destination (symlink points elsewhere; remove it first)" >&2
+      return
+    fi
+  elif [ -e "$destination" ]; then
+    echo "skip $destination (exists and is not a symlink; remove it first)" >&2
+    return
+  fi
+  ln -sfn "$source" "$destination"
+  mkdir -p "$(dirname "$owner")"
+  printf '%s\n' "$source" > "$owner"
+  echo "linked $destination -> $source"
+}
+
 unlink_ours() {
   if [ -L "$2" ] && [ "$(readlink "$2")" = "$1" ]; then
     rm "$2"
@@ -32,10 +55,24 @@ unlink_ours() {
   fi
 }
 
+unlink_recorded() {
+  local source="$1" destination="$2" owner="$3" current="" recorded=""
+  [ -f "$owner" ] && recorded="$(<"$owner")"
+  if [ -L "$destination" ]; then
+    current="$(readlink "$destination")"
+    if [ "$current" = "$source" ] || { [ -n "$recorded" ] && [ "$current" = "$recorded" ]; }; then
+      rm "$destination"
+      echo "removed $destination"
+    fi
+  fi
+  rm -f "$owner"
+}
+
 if [ "${1:-}" = "--uninstall" ]; then
   unlink_ours "$ROOT/bin/msg" "$BIN_DIR/msg"
   unlink_ours "$ROOT/adapters/claude-code/commands/msg.md" "$CLAUDE_CMDS/msg.md"
   unlink_ours "$ROOT/adapters/pi/index.ts" "$PI_EXTENSIONS/herdr-agent-messenger.ts"
+  unlink_recorded "$OPENCODE_SKILL_SOURCE" "$OPENCODE_SKILL_DEST" "$OPENCODE_SKILL_OWNER"
   if command -v claude >/dev/null && [ -f "$INSTALL_STATE/claude-plugin" ]; then
     claude plugin uninstall "$PLUGIN_SELECTOR" --scope user --keep-data -y >/dev/null 2>&1 || true
   fi
@@ -125,10 +162,11 @@ else
   echo "Codex not detected; skipped adapter"
 fi
 if command -v opencode >/dev/null && [ -d "$HOME/.config/opencode" ]; then
+  link_recorded "$OPENCODE_SKILL_SOURCE" "$OPENCODE_SKILL_DEST" "$OPENCODE_SKILL_OWNER"
   if python3 "$ROOT/scripts/opencode_plugin_config.py" install "$OPENCODE_SOURCE"; then
-    echo "installed OpenCode adapter (/msg and /msg-whoami)"
+    echo "installed OpenCode adapter (/msg, /msg-whoami, and agent skill)"
   else
-    echo "OpenCode adapter installation failed; tui.json was preserved" >&2
+    echo "OpenCode TUI adapter installation failed; tui.json was preserved" >&2
   fi
 else
   echo "OpenCode not detected; skipped adapter"
