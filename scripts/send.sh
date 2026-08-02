@@ -9,6 +9,8 @@
 #   --now      deliver immediately, do not wait for the target to go idle
 #   --timeout  max seconds to wait for the target to go idle (default 300)
 #   --dry-run  resolve the target and print the envelope without sending
+# env: MSG_DIAGNOSTICS=1 appends body-free delivery metadata to a private log.
+#      MSG_DIAGNOSTICS_PATH overrides the default diagnostics file.
 
 set -euo pipefail
 
@@ -101,6 +103,113 @@ else:
 PY
 }
 
+delivery_diagnostics_enabled() {
+  [ "${MSG_DIAGNOSTICS:-0}" = "1" ]
+}
+
+agent_snapshot_for_diagnostics() {
+  "$HERDR" agent get "$PANE_ID" 2>&1 || true
+}
+
+write_delivery_diagnostic() {
+  local started_at="$1" finished_at="$2" envelope_bytes="$3"
+  local before="$4" submission="$5" after="$6" exit_code="$7"
+  local diagnostic_path
+  diagnostic_path="${MSG_DIAGNOSTICS_PATH:-${XDG_STATE_HOME:-$HOME/.local/state}/herdr-agent-messenger/delivery.jsonl}"
+
+  if ! MSG_DIAG_PATH="$diagnostic_path" \
+    MSG_DIAG_STARTED_AT="$started_at" MSG_DIAG_FINISHED_AT="$finished_at" \
+    MSG_DIAG_ENVELOPE_BYTES="$envelope_bytes" MSG_DIAG_TARGET_PANE="$PANE_ID" \
+    MSG_DIAG_TARGET_AGENT="$TO_AGENT" MSG_DIAG_BEFORE="$before" \
+    MSG_DIAG_SUBMISSION="$submission" MSG_DIAG_AFTER="$after" \
+    MSG_DIAG_EXIT_CODE="$exit_code" python3 <<'PY'
+import json
+import os
+import stat
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+def decode(raw):
+    try:
+        payload = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}, None
+    agent = payload.get("result", {}).get("agent", {})
+    session = agent.get("agent_session") or {}
+    snapshot = {
+        key: value
+        for key, value in {
+            "pane_id": agent.get("pane_id"),
+            "harness": agent.get("agent"),
+            "status": agent.get("agent_status"),
+            "state_change_seq": agent.get("state_change_seq"),
+            "session_kind": session.get("kind"),
+            "session_source": session.get("source"),
+            "session_identity": session.get("value"),
+        }.items()
+        if value is not None
+    }
+    error = payload.get("error") or {}
+    return snapshot, error.get("code")
+
+
+before, _ = decode(os.environ.get("MSG_DIAG_BEFORE", ""))
+submission, error_code = decode(os.environ.get("MSG_DIAG_SUBMISSION", ""))
+after, _ = decode(os.environ.get("MSG_DIAG_AFTER", ""))
+exit_code = int(os.environ["MSG_DIAG_EXIT_CODE"])
+record = {
+    "recorded_at": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+    "started_at": os.environ["MSG_DIAG_STARTED_AT"],
+    "finished_at": os.environ["MSG_DIAG_FINISHED_AT"],
+    "target_pane": os.environ["MSG_DIAG_TARGET_PANE"],
+    "target_harness": os.environ["MSG_DIAG_TARGET_AGENT"],
+    "envelope_bytes": int(os.environ["MSG_DIAG_ENVELOPE_BYTES"]),
+    "command": "herdr agent prompt",
+    "exit_code": exit_code,
+    "result": "observed" if exit_code == 0 else "not-observed",
+    "error_code": error_code,
+    "before": before,
+    "submission": submission,
+    "after": after,
+}
+
+path = Path(os.environ["MSG_DIAG_PATH"]).expanduser()
+previous_umask = os.umask(0o077)
+try:
+    path.parent.mkdir(parents=True, exist_ok=True)
+finally:
+    os.umask(previous_umask)
+parent = path.parent.stat()
+if not stat.S_ISDIR(parent.st_mode):
+    raise NotADirectoryError(path.parent)
+if parent.st_uid != os.geteuid() or parent.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+    raise PermissionError(f"diagnostics parent is not private and user-owned: {path.parent}")
+try:
+    existing = path.lstat()
+except FileNotFoundError:
+    existing = None
+if existing is not None and (stat.S_ISLNK(existing.st_mode) or not stat.S_ISREG(existing.st_mode)):
+    raise PermissionError(f"diagnostics path is not a regular file: {path}")
+
+flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0)
+fd = os.open(path, flags, 0o600)
+try:
+    opened = os.fstat(fd)
+    if not stat.S_ISREG(opened.st_mode) or opened.st_uid != os.geteuid():
+        raise PermissionError(f"diagnostics path is not a user-owned regular file: {path}")
+    os.fchmod(fd, 0o600)
+    line = (json.dumps(record, separators=(",", ":")) + "\n").encode()
+    if os.write(fd, line) != len(line):
+        raise OSError("incomplete diagnostics write")
+finally:
+    os.close(fd)
+PY
+  then
+    echo "warning: Messenger could not write delivery diagnostics to $diagnostic_path" >&2
+  fi
+}
+
 if [ "$NOW" -ne 1 ] && [ "$DRY" -ne 1 ]; then
   waited=0
   while :; do
@@ -144,5 +253,34 @@ if [ "$DRY" -eq 1 ]; then
   exit 0
 fi
 
-"$HERDR" pane run "$PANE_ID" "$ENVELOPE"
+DIAG_STARTED_AT=""
+DIAG_BEFORE=""
+DIAG_AFTER=""
+ENVELOPE_BYTES=""
+if delivery_diagnostics_enabled; then
+  DIAG_STARTED_AT="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  DIAG_BEFORE="$(agent_snapshot_for_diagnostics)"
+  ENVELOPE_BYTES="$(LC_ALL=C printf '%s' "$ENVELOPE" | wc -c | tr -d ' ')"
+fi
+
+set +e
+SUBMISSION_OUT="$("$HERDR" agent prompt "$PANE_ID" "$ENVELOPE" --wait \
+  --until idle --until working --until blocked --until done --until unknown \
+  --timeout 7000 2>&1)"
+SUBMISSION_CODE=$?
+set -e
+
+if delivery_diagnostics_enabled; then
+  DIAG_AFTER="$(agent_snapshot_for_diagnostics)"
+  write_delivery_diagnostic \
+    "$DIAG_STARTED_AT" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$ENVELOPE_BYTES" \
+    "$DIAG_BEFORE" "$SUBMISSION_OUT" "$DIAG_AFTER" "$SUBMISSION_CODE"
+fi
+
+if [ "$SUBMISSION_CODE" -ne 0 ]; then
+  echo "delivery submission was not observed for ${TO_NAME:+$TO_NAME · }$TO_LABEL / $TO_AGENT ($PANE_ID); the message may remain in the target prompt, so inspect it before retrying" >&2
+  [ -z "$SUBMISSION_OUT" ] || printf '%s\n' "$SUBMISSION_OUT" >&2
+  exit 6
+fi
+
 echo "delivered to ${TO_NAME:+$TO_NAME · }$TO_LABEL / $TO_AGENT ($PANE_ID)"

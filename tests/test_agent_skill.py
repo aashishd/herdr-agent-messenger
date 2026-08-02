@@ -60,14 +60,54 @@ class AgentSkillTest(unittest.TestCase):
         self.assertEqual(
             marketplace["plugins"][0]["version"], claude["version"]
         )
+        minimum_herdr = next(
+            line.split('"')[1]
+            for line in (ROOT / "herdr-plugin.toml").read_text().splitlines()
+            if line.startswith("min_herdr_version = ")
+        )
+        self.assertEqual(minimum_herdr, "0.7.5")
         base_versions = {
             herdr_version,
             claude["version"].split("+")[0],
             codex["version"].split("+")[0],
             opencode["version"],
         }
-        self.assertEqual(base_versions, {"0.2.1"})
+        self.assertEqual(base_versions, {"0.2.2"})
         self.assertEqual(codex["skills"], "./skills/")
+
+    def test_codex_root_hook_is_a_noop_when_loaded_by_claude(self):
+        hooks = json.loads((ROOT / "hooks" / "hooks.json").read_text())
+        command = hooks["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
+        self.assertIn("${CLAUDE_PLUGIN_ROOT:-}", command)
+        self.assertIn("${PLUGIN_ROOT:-}", command)
+
+        claude = subprocess.run(
+            ["sh", "-c", command],
+            input=json.dumps({"prompt": "$herdr-agent-messenger:msg whoami"}),
+            text=True,
+            capture_output=True,
+            env={**os.environ, "CLAUDE_PLUGIN_ROOT": str(ROOT), "PLUGIN_ROOT": ""},
+            timeout=5,
+        )
+        self.assertEqual(claude.returncode, 0, claude.stderr)
+        self.assertEqual(claude.stdout, "")
+        self.assertEqual(claude.stderr, "")
+
+        codex_env = {**os.environ, "PLUGIN_ROOT": str(ROOT)}
+        codex_env.pop("CLAUDE_PLUGIN_ROOT", None)
+        codex_env.pop("HERDR_ENV", None)
+        codex = subprocess.run(
+            ["sh", "-c", command],
+            input=json.dumps({"prompt": "$herdr-agent-messenger:msg whoami"}),
+            text=True,
+            capture_output=True,
+            env=codex_env,
+            timeout=5,
+        )
+        self.assertEqual(codex.returncode, 0, codex.stderr)
+        outcome = json.loads(codex.stdout)
+        self.assertEqual(outcome["decision"], "block")
+        self.assertIn("available only inside herdr", outcome["reason"])
 
     @unittest.skipUnless(shutil.which("claude"), "Claude Code is required")
     def test_claude_plugin_inventory_discovers_the_skill(self):

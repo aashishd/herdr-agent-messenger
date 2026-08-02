@@ -15,7 +15,7 @@ directly from the shell.
 
 ## Install
 
-Requirements: Herdr 0.7.1 or newer, Bash, Python 3, and
+Requirements: Herdr 0.7.5 or newer, Bash, Python 3, and
 [fzf](https://github.com/junegunn/fzf) on macOS or Linux.
 
 ```sh

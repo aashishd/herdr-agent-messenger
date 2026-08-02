@@ -30,6 +30,16 @@ At runtime, Messenger:
 - types one self-contained message into the selected agent pane through Herdr
 - stores temporary call-sign mappings under
   `~/.local/state/herdr-messenger/names.tsv`
+- when `MSG_DIAGNOSTICS=1` is explicitly enabled, stores body-free delivery
+  metadata under
+  `${XDG_STATE_HOME:-$HOME/.local/state}/herdr-agent-messenger/delivery.jsonl`
+  or the configured `MSG_DIAGNOSTICS_PATH`
+
+The diagnostics file is secured to mode `0600` before writing and omits
+envelopes and message bodies. A custom path must have a private, user-owned
+parent; symbolic-link and non-regular files are rejected. The log can contain
+pane and agent-session identifiers, including local paths, so treat it as
+sensitive and enable it only while investigating delivery.
 
 Messenger does not read another pane's conversation or terminal output. It has
 no telemetry, hosted relay, cloud account, or external messaging service.

@@ -11,7 +11,7 @@ model-facing skill are not supported outside Herdr.
 
 You need:
 
-- Herdr 0.7.1 or newer on macOS or Linux
+- Herdr 0.7.5 or newer on macOS or Linux
 - Bash, Python 3, and `fzf`
 - At least two live agent panes on the same Herdr server
 - `~/.local/bin` on `PATH` for the `msg` shell command
@@ -161,6 +161,33 @@ command. A reply is optional unless the message explicitly asks for one.
 Ordinary non-gated collaboration and Messenger replies are permitted by the
 enabled Messenger policy. Protected actions still require the receiving human
 to approve or reject them through the harness's native approval flow.
+
+## Diagnose a delivery failure
+
+Messenger submits an envelope through Herdr's agent-aware prompt path and waits
+up to seven seconds for any receiver lifecycle change. If no change is observed,
+Messenger reports a failure and warns that the envelope may still be present in
+the target prompt. Text left in the prompt has been typed but not submitted, so
+it does not meet Messenger's delivery definition. Inspect the target before
+retrying. Messenger never sends an automatic second Enter or retries the
+envelope.
+
+For temporary failure capture, enable body-free diagnostics on a shell send or
+in the environment that starts the sending harness:
+
+```sh
+MSG_DIAGNOSTICS=1 msg quiet-heron 'Check whether this delivery starts a turn.'
+```
+
+The private JSON Lines log defaults to
+`${XDG_STATE_HOME:-$HOME/.local/state}/herdr-agent-messenger/delivery.jsonl`.
+Set `MSG_DIAGNOSTICS_PATH` to override it. An override must use a private,
+user-owned directory. Messenger rejects an unsafe parent, symbolic-link file,
+or non-regular file. The log is secured to mode `0600` before writing and
+records timestamps, target metadata, before-and-after lifecycle state, reported
+session identity, envelope byte length, and the Herdr result. It never records
+the envelope or message body. Treat the log as sensitive because agent session
+identities may contain local paths or identifiers.
 
 ## Update
 

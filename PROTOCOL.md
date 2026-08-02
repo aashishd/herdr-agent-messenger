@@ -64,9 +64,13 @@ substring. Ambiguity is an error listing the candidates (exit 2).
   approve or reject through the harness's native approval flow. If that flow
   is unavailable, the action remains blocked.
 - **Delivery**: sender waits for the target pane's `agent_status` to be
-  `idle`, `done`, or `unknown` (default up to 300 s) before typing.
-  Status can lag; harnesses that queue mid-turn input (Claude Code does)
-  degrade gracefully.
+  `idle`, `done`, or `unknown` (default up to 300 s), then uses Herdr's
+  agent-aware prompt operation to submit the complete envelope and Enter.
+  Messenger requires a receiver lifecycle change after submission and reports
+  failure if none is observed within seven seconds. The envelope may remain
+  typed but unsubmitted in the target prompt. Messenger never retries or sends
+  a second Enter automatically. Status can lag, and even an observed lifecycle
+  change is not proof that the receiver read or acted on the message.
 - **Reply**: optional, at the receiver's discretion; the envelope's
   embedded command is the route back. Requesting a reply must be
   explicit in the body.
