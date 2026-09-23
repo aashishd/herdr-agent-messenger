@@ -1,6 +1,6 @@
 id = "herdr-agent-messenger"
 name = "Messenger"
-version = "0.2.2"
+version = "0.2.3"
 min_herdr_version = "0.7.5"
 description = "Agent-to-agent messaging between live herdr panes, across harnesses"
 platforms = ["macos", "linux"]

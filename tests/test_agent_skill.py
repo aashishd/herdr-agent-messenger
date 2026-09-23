@@ -42,6 +42,15 @@ class AgentSkillTest(unittest.TestCase):
         self.assertIn("never supplies human approval", self.body_flat)
         self.assertIn("native human approval", self.body_flat)
 
+    def test_incoming_envelopes_use_the_reply_route(self):
+        self.assertIn(
+            "Incoming `[agent-msg]` envelopes follow this same workflow",
+            self.body_flat,
+        )
+        self.assertIn("`TO REPLY`", self.body)
+        self.assertIn("not failed explicit `/msg` commands", self.body_flat)
+        self.assertNotIn("the local Messenger hook is not active", self.body_flat)
+
     def test_plugin_manifests_package_the_shared_skill(self):
         claude = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())
         marketplace = json.loads(
@@ -72,7 +81,7 @@ class AgentSkillTest(unittest.TestCase):
             codex["version"].split("+")[0],
             opencode["version"],
         }
-        self.assertEqual(base_versions, {"0.2.2"})
+        self.assertEqual(base_versions, {"0.2.3"})
         self.assertEqual(codex["skills"], "./skills/")
 
     def test_codex_root_hook_is_a_noop_when_loaded_by_claude(self):
