@@ -10,8 +10,8 @@ user, receive your environment, and can call the full Herdr CLI. Herdr validates
 the manifest and shows an interactive trust preview, but it does not review or
 sandbox third-party plugins.
 
-Review `herdr-plugin.toml`, `install.sh`, `bin/`, `scripts/`, `adapters/`,
-`hooks/`, and `skills/` before confirming installation. Pin a known revision
+Review `herdr-plugin.toml`, `install.sh`, `bin/`, `scripts/`, `adapters/`, and
+`skills/` before confirming installation. Pin a known revision
 with `herdr plugin install aashishd/herdr-agent-messenger --ref <revision>` when
 you need a reproducible install.
 

@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -z \"${CLAUDE_PLUGIN_ROOT:-}\" ] && [ -n \"${PLUGIN_ROOT:-}\" ]; then python3 \"${PLUGIN_ROOT}/adapters/codex/hooks/user_prompt_submit.py\"; fi",
+            "command": "python3 \"${PLUGIN_ROOT}/adapters/codex/hooks/user_prompt_submit.py\"",
             "timeout": 200,
             "statusMessage": "Opening Messenger"
           }

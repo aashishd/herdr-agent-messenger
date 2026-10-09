@@ -81,29 +81,21 @@ class AgentSkillTest(unittest.TestCase):
             codex["version"].split("+")[0],
             opencode["version"],
         }
-        self.assertEqual(base_versions, {"0.2.3"})
+        self.assertEqual(base_versions, {"0.2.4"})
         self.assertEqual(codex["skills"], "./skills/")
 
-    def test_codex_root_hook_is_a_noop_when_loaded_by_claude(self):
-        hooks = json.loads((ROOT / "hooks" / "hooks.json").read_text())
+    def test_codex_hook_is_declared_only_for_codex(self):
+        # Claude Code also loads a plugin's default hooks/hooks.json, so the
+        # Codex hook must live behind the Codex manifest instead.
+        self.assertFalse((ROOT / "hooks" / "hooks.json").exists())
+        codex_manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text())
+        self.assertEqual(codex_manifest["hooks"], "./adapters/codex/hooks/hooks.json")
+
+        hooks = json.loads((ROOT / codex_manifest["hooks"]).read_text())
         command = hooks["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
-        self.assertIn("${CLAUDE_PLUGIN_ROOT:-}", command)
-        self.assertIn("${PLUGIN_ROOT:-}", command)
 
-        claude = subprocess.run(
-            ["sh", "-c", command],
-            input=json.dumps({"prompt": "$herdr-agent-messenger:msg whoami"}),
-            text=True,
-            capture_output=True,
-            env={**os.environ, "CLAUDE_PLUGIN_ROOT": str(ROOT), "PLUGIN_ROOT": ""},
-            timeout=5,
-        )
-        self.assertEqual(claude.returncode, 0, claude.stderr)
-        self.assertEqual(claude.stdout, "")
-        self.assertEqual(claude.stderr, "")
-
-        codex_env = {**os.environ, "PLUGIN_ROOT": str(ROOT)}
-        codex_env.pop("CLAUDE_PLUGIN_ROOT", None)
+        # Codex sets CLAUDE_PLUGIN_ROOT as well as PLUGIN_ROOT for plugin hooks.
+        codex_env = {**os.environ, "PLUGIN_ROOT": str(ROOT), "CLAUDE_PLUGIN_ROOT": str(ROOT)}
         codex_env.pop("HERDR_ENV", None)
         codex = subprocess.run(
             ["sh", "-c", command],
